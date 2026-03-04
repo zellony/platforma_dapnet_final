@@ -334,6 +334,7 @@ src/frontend/electron/dist/
 src/frontend/electron/dist-electron/
 src/frontend/electron/dist-installer/
 src/frontend/electron/win-unpacked/
+src/frontend/app/.vite/
 
 # Local dev config
 src/frontend/electron/dev.backend.json
