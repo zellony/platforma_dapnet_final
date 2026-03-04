@@ -1,0 +1,3 @@
+﻿// PLIK USUNIĘTY - KLASA PRZENIESIONA DO Platform.Kernel
+// namespace Platform.Api.Core.RBAC;
+// public class PermissionRequirement ...

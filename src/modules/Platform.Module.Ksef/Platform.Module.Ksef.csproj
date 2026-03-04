@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<AssemblyName>Platform.Module.Ksef</AssemblyName>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+		<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+		<PackageReference Include="Infoware.FirmaXadesNet" Version="1.1.48" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.24" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.24" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="8.0.24" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.24" PrivateAssets="all" />
+		<PackageReference Include="Npgsql" Version="8.0.6" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\backend\Platform.Contracts\Platform.Contracts.csproj" />
+		<!-- Use Platform.Kernel for shared logic instead of Platform.Api -->
+		<ProjectReference Include="..\..\backend\Platform.Kernel\Platform.Kernel.csproj" />
+	</ItemGroup>
+
+	<!-- Convenience: when building from solution, copy module DLL next to API host -->
+	<Target Name="CopyToApiModules" AfterTargets="Build">
+		<PropertyGroup>
+			<_ApiModulesDir>$(MSBuildThisFileDirectory)..\..\backend\Platform.Api\bin\$(Configuration)\net8.0\modules\</_ApiModulesDir>
+		</PropertyGroup>
+		<MakeDir Directories="$(_ApiModulesDir)" />
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(_ApiModulesDir)" SkipUnchangedFiles="true" />
+	</Target>
+</Project>

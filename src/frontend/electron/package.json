@@ -1,0 +1,34 @@
+{
+  "name": "platform-desktop",
+  "version": "0.1.0",
+  "description": "Platforma DAPNET Desktop App",
+  "author": "DAPNET",
+  "private": true,
+  "main": "dist-electron/main/main.js",
+  "scripts": {
+    "publish-backend-dev": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"& { & '..\\\\..\\\\..\\\\scripts\\\\publish-backend-dev.ps1' } ; exit $LASTEXITCODE\"",
+    "dev": "npm run publish-backend-dev && concurrently -k \"npx vite --host 127.0.0.1 --port 5173\" \"npx tsc -p tsconfig.main.json --watch\" \"npx tsc -p tsconfig.preload.json --watch\" \"npx electron .\"",
+    "dev:prod": "npm run publish-backend-dev && concurrently -k \"npx vite --host 127.0.0.1 --port 5173\" \"npx tsc -p tsconfig.main.json --watch\" \"npx tsc -p tsconfig.preload.json --watch\" \"npx electron . --prod\"",
+    "build": "tsc -p tsconfig.main.json && tsc -p tsconfig.preload.json && vite build",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.4",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^9.0.1",
+    "electron": "^32.0.0",
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.1",
+    "wait-on": "^8.0.1"
+  }
+}

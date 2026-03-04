@@ -1,0 +1,127 @@
+﻿.taskbar {
+    position: relative;
+    height: var(--taskbar-height); 
+    /* ✅ UJEDNOLICONE TŁO I OBRAMOWANIE */
+    background: var(--bg-soft);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    z-index: 1000;
+    pointer-events: auto;
+}
+
+.taskbar-settings-btn {
+    height: 34px; width: 40px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border-radius: 6px;
+    transition: all 0.2s;
+    color: var(--text-muted);
+}
+.taskbar-settings-btn:hover { 
+    background: rgba(255, 255, 255, 0.03); 
+    color: var(--text-main);
+}
+.taskbar-settings-btn.active { 
+    background: rgba(74, 144, 226, 0.1); 
+    color: var(--accent);
+}
+
+/* 🟦 MENU PASKA ZADAŃ (UJEDNOLICONE Z FLYOUT) */
+.taskbar-menu {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    width: 240px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+    z-index: 10001;
+    padding: 4px;
+    animation: popInUp 0.15s ease-out;
+}
+
+.taskbar-menu-header {
+    padding: 8px 12px;
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+    opacity: 0.6;
+}
+
+.taskbar-menu-item {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-main);
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s;
+}
+
+.taskbar-menu-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--accent);
+}
+
+.taskbar-menu-item--danger {
+    color: var(--danger);
+}
+.taskbar-menu-item--danger:hover {
+    background: rgba(235, 87, 87, 0.1);
+}
+
+.taskbar-menu-separator {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+}
+
+/* 🟦 KAFELKI OKIEN (UJEDNOLICONE) */
+.taskbar-item { 
+    background: rgba(0, 0, 0, 0.15); 
+    border: 1px solid transparent; 
+    height: 34px;
+    display: flex; align-items: center;
+    cursor: pointer; border-radius: 6px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    color: var(--text-muted);
+}
+
+.taskbar-item:hover { 
+    background: rgba(255, 255, 255, 0.03); 
+    border-color: var(--border);
+    color: var(--text-main);
+}
+
+.taskbar-item.active { 
+    background: rgba(74, 144, 226, 0.08); 
+    border-color: var(--accent); 
+    color: var(--accent) !important;
+    font-weight: 600;
+}
+
+.taskbar-indicator {
+    position: absolute; 
+    bottom: 2px; 
+    left: 15%; 
+    right: 15%; 
+    height: 2px; 
+    background: var(--accent); 
+    border-radius: 2px; 
+    box-shadow: 0 0 8px rgba(74, 144, 226, 0.4);
+}
+
+@keyframes popInUp {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}

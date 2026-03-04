@@ -1,0 +1,206 @@
+﻿Platforma DAPNET - historia prac
+Data: 2026-03-04
+
+Zakres tej sesji (skrót):
+- Porządki struktury frontend/backend i skryptów.
+- Dynamiczny port backendu + runtime.json (local + ProgramData).
+- Stabilizacja połączenia frontend <-> backend.
+- Tryb serwisowy (admin/UAC), obsługa braku DB i konfiguracji.
+- Poprawki UX startu i konfiguracji bazy.
+- CORS hardening (desktop/dev/prod) i diagnostyka dev.
+- Poprawki zapytań EF (deterministyczne First/FirstOrDefault).
+
+Status planu naprawczego (oryginalne 10 punktów):
+
+1) Zablokuj krytyczne luki auth/CORS (najpierw) - W TRAKCIE
+   - ZROBIONE:
+     * Usunięto CORS allow-all (SetIsOriginAllowed(_ => true)).
+     * Dodano AppCorsPolicy z konfiguracją:
+       - dev: localhost/127.0.0.1:5173,
+       - prod desktop: obsługa Origin=null (file://).
+     * Dodano fail-fast dla pustej polityki CORS w prod.
+   - POZOSTAŁO:
+     * Część auth z punktów 3-5 (backdoor/logout-beacon/sesje).
+
+2) Usuń stały fallback JWT key - ZROBIONE (model desktop)
+   - Brak TEMPORARY_KEY_UNTIL_DB_IS_READY_123456.
+   - Klucz JWT ładowany z bezpiecznego magazynu lokalnego.
+   - Fail-fast, jeśli klucz pusty/błąd inicjalizacji.
+
+3) Usuń/wyłącz backdoor AdminDAPNET - NIEZROBIONE
+   - Backdoor nadal obecny w AuthController (_l/_p).
+
+4) Napraw logout-beacon - NIEZROBIONE
+   - Nadal ValidateIssuer=false/ValidateAudience=false.
+   - Brak walidacji session_id.
+
+5) Napraw globalne wylogowywanie sesji - NIEZROBIONE
+   - Brak pełnego instance_id i selektywnego zamykania sesji per instancja.
+
+6) Oczyść sekrety z repo - CZĘŚCIOWO
+   - Nadal występują sekrety w appsettings.Development.json.
+   - Rotacja sekretów jeszcze niepotwierdzona.
+
+7) Utwardź ReadOnlyMiddleware - NIEZROBIONE
+
+8) Dokończ porządki kodu - CZĘŚCIOWO
+   - Wykonano szerokie porządki frontend/electron i startup.
+   - Pozostały porządki backendowe i ujednolicenie komentarzy/kodowania.
+
+9) Dodaj testy bezpieczeństwa i regresji - NIEZROBIONE
+
+10) Wdrożenie etapami (bezpiecznie) - NIEZROBIONE FORMALNIE
+   - Brak formalnego zamknięcia etapów A/B/C z checklistą testów po każdym etapie.
+
+Dodatkowe wykonane poprawki techniczne w tej sesji:
+- DevTools zawsze dostępne w dev (F12, Ctrl+Shift+I).
+- Backend uruchamiany z ASPNETCORE_ENVIRONMENT=Development w dev-run.
+- Dev startup log tylko w dev: artifacts/logs/electron-startup.log.
+- SetupScreen:
+  * polling /health/live zamiast sztywnego 5s,
+  * retry /system/init,
+  * status "Wczytywanie konfiguracji...".
+- Startup UI:
+  * etapowe komunikaty ładowania (backend/db/moduły).
+- EF warning fix:
+  * CompanyController i LicenseService -> deterministyczne OrderBy + FirstOrDefaultAsync.
+
+Następny zalecany krok:
+- Punkt 3 (usunięcie backdoor AdminDAPNET), następnie punkt 4 i 5.
+
+Aktualizacja (po wdrozeniu konta serwisowego):
+- AuthController: usunieto hardcoded _l/_p.
+- Dodano ServiceAccount z konfiguracji (Enabled/Login/PasswordHash).
+- Logowanie serwisowe ograniczone do lokalnej maszyny (loopback) + audit log (success/fail).
+- Podmieniono stale "AdminDAPNET" na konfiguracje ServiceAccount:Login w:
+  * SystemController (adminRequired check),
+  * AdminUsersController (reserved login check).
+- Dodano ServiceAccount do appsettings.json i appsettings.Development.json.
+
+Aktualizacja statusu (kolejny etap):
+- Punkt 3 (backdoor AdminDAPNET): PRZEKSZTALCONY i wdrozony jako konto serwisowe konfigurowane.
+  * usunieto hardcoded login/haslo z kodu (_l/_p),
+  * konto serwisowe dziala przez ServiceAccount (Enabled/Login/PasswordHash),
+  * logowanie serwisowe ograniczone do lokalnej maszyny (loopback),
+  * dodano audyt logowania serwisowego (success/fail/blocked).
+- Dodano brute-force protection dla konta serwisowego:
+  * ServiceAccount:RateLimit:MaxAttempts (domyslnie 5),
+  * ServiceAccount:RateLimit:LockoutMinutes (domyslnie 10),
+  * po przekroczeniu progu zwracane 429,
+  * reset licznika po poprawnym logowaniu.
+
+Status punktow po tej zmianie:
+1) CORS/Auth - W TRAKCIE
+2) JWT fallback - ZROBIONE
+3) Backdoor AdminDAPNET - ZREALIZOWANE W WARIANCIE KONTA SERWISOWEGO (bez hardcodu hasla)
+4) Logout-beacon - NIEZROBIONE
+5) Globalne wylogowywanie sesji - NIEZROBIONE
+6) Sekrety z repo - CZESCIOWO
+7) ReadOnlyMiddleware - NIEZROBIONE
+8) Porzadki kodu - CZESCIOWO
+9) Testy bezpieczenstwa/regresji - NIEZROBIONE
+10) Wdrozenie etapami - NIEZROBIONE FORMALNIE
+
+Aktualizacja statusu (logout-beacon):
+- Punkt 4 wdrozony:
+  * logout-beacon przyjmuje tylko lokalne wywolania,
+  * pelna walidacja JWT (issuer + audience + signing key),
+  * wylogowanie tylko pojedynczej sesji po claim session_id (zamiast wszystkich sesji usera).
+
+Aktualizacja statusu (punkt 5 - sesje per instancja):
+- Dodano RuntimeInstanceContext (backend instance_id z argumentu startowego).
+- Electron przekazuje --instance-id=... do backendu przy starcie.
+- Sesje zapisywane z tagiem instance w user_agent (suffix ;instance=<id>).
+- ParentProcessMonitor zamyka tylko sesje tej instancji (UPDATE ... WHERE user_agent LIKE %;instance=<id>%).
+- Efekt: zamkniecie jednej instancji nie wylogowuje sesji z innych rownoleglych instancji.
+
+- [x] Punkt 5 (sesje/instance): dodano kolumne app_core.user_sessions.instance_id + indeks, logowanie zapisuje instance_id, ParentProcessMonitor zamyka sesje po instance_id (z fallbackiem do starego user_agent).
+
+Aktualizacja (stabilizacja trybu serwisowego przy DB_UNAVAILABLE):
+- UserActivityMiddleware utwardzony: pomija aktualizacje aktywnosci dla /health/*, /system/status, /system/config/db.
+- Dodano fail-safe: bledy DB w update LastActivityAtUtc sa logowane jako warning i nie przerywaja requestu (brak unhandled exception 500).
+- Efekt: przy blednej nazwie bazy (3D000) frontend poprawnie przechodzi do scenariusza trybu serwisowego zamiast zawieszki/wywalenia flow.
+
+Aktualizacja (sekret hasla konta serwisowego poza appsettings):
+- Dodano secure local store (DPAPI) dla hasha konta serwisowego: ProgramData\\PlatformaDapnet\\service_account.hash.
+- Startup wykonuje bootstrap hasha do secure store i wstrzykuje wartosc do IConfiguration w runtime.
+- Usunieto ServiceAccount:PasswordHash z appsettings.json i appsettings.Development.json (takze zsynchronizowano artifacts).
+- Efekt: appsettings nie przechowuje hasla konta serwisowego, aplikacja po kompilacji nadal dziala.
+
+Aktualizacja (konto serwisowe tylko w kodzie + pepper):
+- Usunieto model service_account.hash w ProgramData dla konta serwisowego (brak zaleznosci od pliku).
+- Dodano ServiceAccountPepper oraz ServiceAccountSecretsProvider: login + bcrypt hash sa rozbite/zakodowane i skladane dopiero w runtime.
+- Startup laduje ServiceAccount:Login oraz ServiceAccount:PasswordHash z provider'a kodowego.
+- appsettings.json i appsettings.Development.json nie zawieraja juz loginu/hasha konta serwisowego.
+- Pozostawiono zabezpieczenia: localhost-only, rate-limit/lockout, audyt logowan serwisowych.
+- Weryfikacja: build backend przechodzi, aplikacja nie wymaga pliku ProgramData\\service_account.hash.
+
+Korekta statusow i spojnosc notatki:
+- Wczesniejsze wpisy 'Punkt 4 - NIEZROBIONE' i 'Punkt 5 - NIEZROBIONE' sa historyczne i nieaktualne; oba punkty zostaly wdrozone (logout-beacon hardening + sesje per instance_id).
+- Wpis o secure local store dla service_account.hash (ProgramData) jest historyczny i zostal zastapiony nowszym podejsciem: konto serwisowe tylko w kodzie + pepper, bez pliku service_account.hash.
+- Utrzymano informacje o stabilizacji trybu serwisowego (DB_UNAVAILABLE + UserActivityMiddleware fail-safe) jako aktualne.
+
+Aktualizacja (audit sekretow w calym repo):
+- Wykonano pelny skan repo pod stare sekrety/backdoor (konfigi, skrypty, zrodla, artifacts).
+- W glownym projekcie (backend/frontend/scripts/artifacts) brak aktywnych sekretow legacy.
+- Pozostale trafienia dotycza tylko katalogu tools (odlozone decyzja: 'tools nie ruszamy na razie').
+
+Aktualizacja (punkt 7 - ReadOnlyMiddleware hardening):
+- Usunieto nieprecyzyjne path.Contains(...) dla wyjatkow read-only.
+- Wprowadzono jawna whitelist endpointow modyfikujacych (dokladny match method+path):
+  * POST:/auth/login
+  * POST:/auth/logout
+  * POST:/auth/logout-beacon
+  * POST:/system/config/db
+  * POST:/system/db/ping
+  * POST:/license/upload
+- Wszystkie pozostale POST/PUT/PATCH/DELETE dla is_read_only=true sa blokowane 403.
+- Logowanie middleware przeniesione z Console.WriteLine na ILogger (warning/info).
+
+Doprecyzowanie testow punktu 7:
+- Wdrozenie ReadOnlyMiddleware hardening zakonczone.
+- Pelny test runtime (blokady zapisu dla is_read_only=true) odlozony, bo wymaga scenariusza z nieaktywna/wygasla licencja.
+- Do wykonania przy najblizszej symulacji licencji nieaktywnej: potwierdzenie 403 dla endpointow modyfikujacych spoza whitelisty.
+
+Aktualizacja (punkt 8 - porzadki kodu):
+- Usunieto stub pliku Platform.Api/Core/RBAC/PermissionPolicyProvider.cs (zostaje jedna rzeczywista implementacja w Platform.Kernel).
+- PermissionAuthorizationHandler: usunieto Console.WriteLine debug, dodano ILogger (debug/info/warning).
+- MeController: usunieto Console.WriteLine w catch, dodano ILogger.LogError.
+- Build backend przechodzi po zmianach.
+- Pozostale Console.WriteLine startupowe (Program/Startup/ModuleLoader/DatabaseInitializer) zostawione swiadomie na razie jako diagnostyka rozruchu; mozna je przepiac etapem kolejnym, jesli chcesz zamknac punkt 8 w 100%.
+
+Aktualizacja (punkt 8 domkniety):
+- Usunieto pozostale Console.WriteLine z Platform.Api (Program, StartupApplicationExtensions, StartupServiceExtensions, DatabaseInitializer, ModuleLoader).
+- Logowanie startup/init przeniesiono na ILogger (Information/Warning/Error).
+- Poprawiono komunikat z krzakami kodowania: 'Ladowanie Modulow'.
+- Weryfikacja: brak wystapien Console.WriteLine w src/backend/Platform.Api oraz build backend przechodzi.
+
+Aktualizacja (punkt 9 - testy bezpieczenstwa/regresji, etap 1):
+- Dodano testy ReadOnlyMiddleware (unit):
+  * blokada 403 dla is_read_only=true i endpointu modyfikujacego spoza whitelisty,
+  * przepuszczenie endpointu z whitelisty,
+  * przepuszczenie dla usera bez trybu read-only,
+  * przepuszczenie dla metod niemodyfikujacych.
+- Dodano testy konfiguracji appsettings (security guard):
+  * brak legacy wpisow: SuperAdmin, GreenIsTheBest, ServiceAccount PasswordHash, Jwt:Key.
+- Weryfikacja: dotnet test src/backend/Platform.Tests/Platform.Tests.csproj => 7/7 PASS.
+- Kolejny krok (opcjonalny): testy integracyjne TestServer dla CORS/login/logout-beacon.
+
+Aktualizacja (punkt 9 - testy bezpieczenstwa/regresji, etap 2):
+- Dodano testy security dla AuthController (in-memory DB):
+  * logowanie serwisowe z loopback + poprawnym haslem -> sukces,
+  * logowanie serwisowe spoza loopback -> Unauthorized,
+  * logout-beacon z poprawnym JWT/session_id zamyka tylko wskazana sesje.
+- Dodano paczke testowa Microsoft.EntityFrameworkCore.InMemory do Platform.Tests.
+- Weryfikacja: dotnet test src/backend/Platform.Tests/Platform.Tests.csproj => 10/10 PASS.
+- Uwaga: pelny test CORS na preflight przez caly pipeline (TestServer/WebApplicationFactory) pozostaje jako opcjonalny etap rozszerzony.
+
+Aktualizacja (punkt 10 - lekki proces na faze development):
+- Dodano lekka checklistę release: docs/release/lightweight-release-checklist.md.
+- Zawiera etapy A/B/C oraz szybki smoke (5 min) po wiekszych zmianach.
+- Ustalono: ciezki formalny proces release odkladamy do momentu pierwszej oficjalnej publikacji.
+
+Aktualizacja (wzor testow na przyszlosc):
+- Dodano dokument wzorcowy: docs/testing/test-plan-template.md.
+- Zawiera dwa tryby: LIGHT (szybkie testy) i FULL (pelna regresja/release).
+- Dodano gotowe checklisty, komendy, kryteria PASS/FAIL i tabele raportowania wynikow.

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Platform.Module.Health</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\backend\Platform.Contracts\Platform.Contracts.csproj" />
+    <ProjectReference Include="..\..\backend\Platform.Kernel\Platform.Kernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="Infoware.FirmaXadesNet" Version="1.1.48" />
+    <PackageReference Include="Npgsql" Version="8.0.6" />
+  </ItemGroup>
+
+  <!-- Convenience: when building from solution, copy module DLL next to API host -->
+  <Target Name="CopyToApiModules" AfterTargets="Build">
+    <PropertyGroup>
+      <_ApiModulesDir>$(MSBuildThisFileDirectory)..\..\backend\Platform.Api\bin\$(Configuration)\net8.0\modules\</_ApiModulesDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(_ApiModulesDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(_ApiModulesDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>
